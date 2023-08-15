@@ -1,22 +1,22 @@
----
-apiVersion: "networking.k8s.io/v1"
-kind: "Ingress"
-metadata:
-  annotations: {}
-  uid: "5c9b5782-3aef-4108-af77-07c666933851"
-  name: "nginx-ingress"
-  labels:
-    app.kubernetes.io/name: "ingress"
-    app.kubernetes.io/instance: "ingress"
-spec:
-  rules:
-  - host: "your-domain.com"
-    http:
-      paths:
-      - path: "/"
-        pathType: "Prefix"
-        backend:
-          serviceName: nginx-service
-          servicePort: 80
-status:
-  loadBalancer: {}
+# ---
+# apiVersion: "networking.k8s.io/v1"
+# kind: "Ingress"
+# metadata:
+#   annotations: {}
+#   uid: "5c9b5782-3aef-4108-af77-07c666933851"
+#   name: "nginx-ingress"
+#   labels:
+#     app.kubernetes.io/name: "ingress"
+#     app.kubernetes.io/instance: "ingress"
+# spec:
+#   rules:
+#   - host: "your-domain.com"
+#     http:
+#       paths:
+#       - path: "/"
+#         pathType: "Prefix"
+#         backend:
+#           serviceName: nginx-service
+#           servicePort: 80
+# status:
+#   loadBalancer: {}
