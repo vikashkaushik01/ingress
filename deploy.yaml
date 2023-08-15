@@ -1,16 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: test-app
+  name: yada-dev
+  namespace: yad-nonprod
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: test-app
+      app: yada-dev
   template:
     metadata:
       labels:
-        app: test-app
+        app: yada-dev
     spec:
       containers:
         - name: nginx-container

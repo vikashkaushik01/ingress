@@ -1,15 +1,15 @@
----
-apiVersion: extension/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: test-ingress-vikash
+  name: yada-ingress-dev
+  namespace: yad-nonprod
 spec:
   rules:
-  - host: yourhostname.com
-    http:
-      backend:
-        serviceName: test
-        servicePort: 80
-      paths:
-      - path: /testpath
-        pathType: Prefix
+    - host: yada.dev.nibr.novartis.net
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              serviceName: yada-dev
+              servicePort: 80

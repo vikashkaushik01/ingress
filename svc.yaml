@@ -1,10 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: test
+  name: yada-dev
+  namespace: yad-nonprod
 spec:
   selector:
-    app: test-app
+    app: yada-dev
   ports:
     - protocol: TCP
       port: 80
