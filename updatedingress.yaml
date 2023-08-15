@@ -1,0 +1,19 @@
+---
+apiVersion: "networking.k8s.io/v1"
+kind: "Ingress"
+metadata:
+  annotations: {}
+  name: "test-ingress-vikash"
+  labels:
+    app.kubernetes.io/name: "ingress-test"
+    app.kubernetes.io/instance: "ingress-test"
+spec:
+  backend:
+    serviceName: "test"
+    servicePort: 80
+  rules:
+  - host: ""
+    http: {}
+  tls:
+  - hosts: []
+status: {}
