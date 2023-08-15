@@ -15,7 +15,8 @@ spec:
       http:
         paths:
           - backend:
-              serviceName: yada-dev
-              servicePort: 80
+              service:
+                name: yada-dev
+                port: 80
             path: /
             pathType: ImplementationSpecific

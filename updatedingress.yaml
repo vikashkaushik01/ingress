@@ -1,15 +1,23 @@
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+---
+apiVersion: "networking.k8s.io/v1"
+kind: "Ingress"
 metadata:
-  name: yada-ingress-dev
-  namespace: yad-nonprod
+  annotations: {}
+  name: "test"
+  labels:
+    app.kubernetes.io/name: "ingress-test"
+    app.kubernetes.io/instance: "ingress-test"
 spec:
+  backend:
+    serviceName: "test"
+    servicePort: 80
+    service:
+      name: "test"
+      port:
+        number: 80
   rules:
-    - host: yada.dev.nibr.novartis.net
-      http:
-        paths:
-          - path: /
-            pathType: ImplementationSpecific
-            backend:
-              serviceName: yada-dev
-              servicePort: 80
+  - host: ""
+    http: {}
+  tls:
+  - hosts: []
+status: {}
