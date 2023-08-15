@@ -1,19 +1,15 @@
 ---
-apiVersion: "extension/v1beta1"
-kind: "Ingress"
+apiVersion: extension/v1beta1
+kind: Ingress
 metadata:
-  annotations: {}
-  name: "test-ingress-vikash"
-  labels:
-    app.kubernetes.io/name: "ingress-test"
-    app.kubernetes.io/instance: "ingress-test"
+  name: test-ingress-vikash
 spec:
-  backend:
-    serviceName: "test"
-    servicePort: 80
   rules:
-  - host: ""
-    http: {}
-  tls:
-  - hosts: []
-status: {}
+  - host: yourhostname.com
+    http:
+      backend:
+        serviceName: test
+        servicePort: 80
+      paths:
+      - path: /testpath
+        pathType: Prefix
