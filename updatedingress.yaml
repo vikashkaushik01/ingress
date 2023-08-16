@@ -3,7 +3,7 @@ apiVersion: "networking.k8s.io/v1"
 kind: "Ingress"
 metadata:
   annotations: {}
-  name: "test"
+  name: "novartis"
   labels:
     app.kubernetes.io/name: "ingress-test"
     app.kubernetes.io/instance: "ingress-test"
@@ -16,8 +16,9 @@ spec:
       port:
         number: 80
   rules:
-  - host: ""
+  - host: "a.b.com"
     http: {}
   tls:
-  - hosts: []
+  - hosts:
+    - "a.b.com"
 status: {}
