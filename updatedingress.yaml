@@ -9,8 +9,6 @@ metadata:
     app.kubernetes.io/instance: "ingress-test"
 spec:
   backend:
-    serviceName: "test"
-    servicePort: 80
     service:
       name: "test"
       port:
