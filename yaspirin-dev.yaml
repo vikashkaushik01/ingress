@@ -1,0 +1,1678 @@
+apiVersion: v1
+binaryData: {}
+data:
+  S3PARABOX: s3://nibr-useast1-as-aspirin-dev00
+  YADA_ENV: https://yada.dev.nibr.novartis.net/yada.jsp
+kind: ConfigMap
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+  name: aspirin-yada-config-dev
+  namespace: yad-nonprod
+---
+apiVersion: v1
+binaryData: {}
+data:
+  EMAIL_FORMAT: stdout
+  EMAIL_RECIPIENT: cpo
+kind: ConfigMap
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+  name: cron-mailer-preferences-dev
+  namespace: yad-nonprod
+---
+apiVersion: v1
+binaryData: {}
+data:
+  ASPIRINCORSLIST: http://yada.dev.nibr.novartis.net,https://yada.dev.nibr.novartis.net,http://aspirin.dev.nibr.novartis.net,https://aspirin.dev.nibr.novartis.net,http://aspirin-dev.nibr.novartis.net,https://aspirin-dev.nibr.novartis.net,https://yadaadmintool.dev.nibr.novartis.net,http://localhost.novartis.net,http://localhost.novartis.net:3000,http://172.29.205.133,http://172.29.205.133:3000
+  S3PARABOX: s3://nibr-useast1-as-aspirin-dev00
+kind: ConfigMap
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+  name: yada-server-environment-dev
+  namespace: yad-nonprod
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: yada
+  name: yada-dev
+  namespace: yad-nonprod
+spec:
+  externalIPs: []
+  healthCheckNodePort: 0
+  loadBalancerSourceRanges: []
+  ports:
+  - name: yada-port
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: yaspirin
+    environment: dev
+    yada/component: yada
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: yadaadmintool
+  name: yadaadmintool-dev
+  namespace: yad-nonprod
+spec:
+  externalIPs: []
+  healthCheckNodePort: 0
+  loadBalancerSourceRanges: []
+  ports:
+  - name: yadaadmintool-port
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: yaspirin
+    environment: dev
+    yada/component: yadaadmintool
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations: null
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: yada
+  name: yada-dev
+  namespace: yad-nonprod
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchExpressions: []
+    matchLabels:
+      app: yaspirin
+      environment: dev
+      yada/component: yada
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-inject-secret-YADA.properties: secret/projects/yad/dev/secrets
+        vault.hashicorp.com/agent-inject-secret-aspirin-vault.profile: secret/projects/yad/dev/aspirin
+        vault.hashicorp.com/agent-inject-secret-aspirin-vault.props: secret/projects/yad/dev/aspirin
+        vault.hashicorp.com/agent-inject-template-YADA.properties: '{{ with secret
+          "secret/projects/yad/dev/secrets" }} {{ range $k,$v := .Data.data }} {{
+          $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+        vault.hashicorp.com/agent-inject-template-aspirin-vault.profile: '{{ with
+          secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+          }} {{ $k  | printf "export %s"}}={{ $v | printf  "\"%s\"\n" }} {{ end }}
+          {{end }}'
+        vault.hashicorp.com/agent-inject-template-aspirin-vault.props: '{{ with secret
+          "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data }} {{
+          $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+        vault.hashicorp.com/agent-pre-populate-only: "false"
+        vault.hashicorp.com/auth-path: auth/kube1
+        vault.hashicorp.com/preserve-secret-case: "true"
+        vault.hashicorp.com/role: project_yad_dev1_read
+        vault.hashicorp.com/secret-volume-path: /opt/yada/etc
+        vault.hashicorp.com/tls-skip-verify: "true"
+      labels:
+        app: yaspirin
+        environment: dev
+        yada/component: yada
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions: []
+                matchLabels:
+                  app: yaspirin
+                  environment: dev
+                  yada/component: yada
+              namespaces: []
+              topologyKey: kubernetes.io/hostname
+            weight: 10
+      containers:
+      - args: []
+        command: []
+        envFrom:
+        - configMapRef:
+            name: yada-server-environment-dev
+            optional: false
+          prefix: ""
+        image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada:88
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          successThreshold: 1
+          tcpSocket:
+            path: /yada.jsp?qname=DSMT+get+quick+properties&pz=1
+            port: 8080
+            scheme: HTTP
+          timeoutSeconds: 20
+        name: yada
+        ports:
+        - containerPort: 8080
+          name: yada
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            path: /yada.jsp?qname=DSMT+get+quick+properties&pz=1
+            port: 8080
+            scheme: HTTP
+          timeoutSeconds: 20
+        resources:
+          limits:
+            cpu: "2.0"
+            memory: 2Gi
+          requests:
+            cpu: 500m
+            memory: 250Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1000
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      - args:
+        - -c
+        - /opt/aspirin-asm.sh --loop
+        command:
+        - /bin/bash
+        image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada-asm:88
+        imagePullPolicy: Always
+        name: yada-asm
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: docker-repo.nibr.novartis.net
+      nodeSelector: {}
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        supplementalGroups: []
+      serviceAccount: vault-auth
+      serviceAccountName: vault-auth
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations: null
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: yadaadmintool
+  name: yadaadmintool-dev
+  namespace: yad-nonprod
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchExpressions: []
+    matchLabels:
+      app: yaspirin
+      environment: dev
+      yada/component: yadaadmintool
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-inject-secret-YADA.properties: secret/projects/yad/dev/secrets
+        vault.hashicorp.com/agent-inject-secret-aspirin-vault.profile: secret/projects/yad/dev/aspirin
+        vault.hashicorp.com/agent-inject-secret-aspirin-vault.props: secret/projects/yad/dev/aspirin
+        vault.hashicorp.com/agent-inject-template-YADA.properties: '{{ with secret
+          "secret/projects/yad/dev/secrets" }} {{ range $k,$v := .Data.data }} {{
+          $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+        vault.hashicorp.com/agent-inject-template-aspirin-vault.profile: '{{ with
+          secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+          }} {{ $k  | printf "export %s"}}={{ $v | printf  "\"%s\"\n" }} {{ end }}
+          {{end }}'
+        vault.hashicorp.com/agent-inject-template-aspirin-vault.props: '{{ with secret
+          "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data }} {{
+          $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+        vault.hashicorp.com/agent-pre-populate-only: "false"
+        vault.hashicorp.com/auth-path: auth/kube1
+        vault.hashicorp.com/preserve-secret-case: "true"
+        vault.hashicorp.com/role: project_yad_dev1_read
+        vault.hashicorp.com/secret-volume-path: /opt/yada/etc
+        vault.hashicorp.com/tls-skip-verify: "true"
+      labels:
+        app: yaspirin
+        environment: dev
+        yada/component: yadaadmintool
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions: []
+                matchLabels:
+                  app: yaspirin
+                  environment: dev
+                  yada/component: yadaadmintool
+              namespaces: []
+              topologyKey: kubernetes.io/hostname
+            weight: 10
+      containers:
+      - args: []
+        command: []
+        envFrom:
+        - configMapRef:
+            name: yada-server-environment-dev
+            optional: false
+          prefix: ""
+        image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada:88
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          successThreshold: 1
+          tcpSocket:
+            path: /yada.jsp?qname=DSMT+get+quick+properties&pz=1
+            port: 8080
+            scheme: HTTP
+          timeoutSeconds: 20
+        name: yada
+        ports:
+        - containerPort: 8080
+          name: yadaadmintool
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            path: /yada.jsp?qname=DSMT+get+quick+properties&pz=1
+            port: 8080
+            scheme: HTTP
+          timeoutSeconds: 20
+        resources:
+          limits: {}
+          requests: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1000
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      - args:
+        - -c
+        - /opt/aspirin-asm.sh --loop
+        command:
+        - /bin/bash
+        image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada-asm:88
+        imagePullPolicy: Always
+        name: yada-asm
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: docker-repo.nibr.novartis.net
+      nodeSelector: {}
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        supplementalGroups: []
+      serviceAccount: vault-auth
+      serviceAccountName: vault-auth
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: mailer-cpo-assignment-daily
+  name: mailer-cpo-assignment-daily-dev
+  namespace: yad-nonprod
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      annotations: {}
+      labels:
+        app: yaspirin
+        environment: dev
+    spec:
+      backoffLimit: 0
+      completions: 1
+      parallelism: 1
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-inject-secret-YADA.properties: secret/projects/yad/dev/secrets
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.profile: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.props: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-template-YADA.properties: '{{ with secret
+              "secret/projects/yad/dev/secrets" }} {{ range $k,$v := .Data.data }}
+              {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.profile: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k  | printf "export %s"}}={{ $v | printf  "\"%s\"\n" }} {{ end
+              }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.props: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/auth-path: auth/kube1
+            vault.hashicorp.com/preserve-secret-case: "true"
+            vault.hashicorp.com/role: project_yad_dev1_read
+            vault.hashicorp.com/secret-volume-path: /opt/yada/etc
+            vault.hashicorp.com/tls-skip-verify: "true"
+          labels:
+            app: yaspirin
+            environment: dev
+            yada/component: mailer-cpo-assignment-daily
+        spec:
+          containers:
+          - args:
+            - mailer
+            - --type
+            - assignment
+            - --set1
+            - "1"
+            - --user
+            - all-cpos
+            - --output
+            - $(EMAIL_FORMAT)
+            - --recipient
+            - $(EMAIL_RECIPIENT)
+            command: []
+            envFrom:
+            - configMapRef:
+                name: cron-mailer-preferences-dev
+                optional: false
+              prefix: ""
+            - configMapRef:
+                name: aspirin-yada-config-dev
+                optional: false
+              prefix: ""
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/batches:88
+            imagePullPolicy: Always
+            name: mailer-cpo-assignment-daily
+            resources:
+              limits: {}
+              requests: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          - args:
+            - -c
+            - '/opt/aspirin-asm.sh '
+            command:
+            - /bin/bash
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada-asm:88
+            imagePullPolicy: Always
+            name: yada-asm
+          dnsPolicy: ClusterFirst
+          imagePullSecrets:
+          - name: docker-repo.nibr.novartis.net
+          nodeSelector: {}
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext:
+            supplementalGroups: []
+          serviceAccount: vault-auth
+          serviceAccountName: vault-auth
+          terminationGracePeriodSeconds: 30
+      ttlSecondsAfterFinished: 86400
+  schedule: '7 0 * * * '
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  suspend: false
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: mailer-cpo-overdue-weekly-mock
+  name: mailer-cpo-overdue-weekly-dev
+  namespace: yad-nonprod
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      annotations: {}
+      labels:
+        app: yaspirin
+        environment: dev
+    spec:
+      backoffLimit: 0
+      completions: 1
+      parallelism: 1
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-inject-secret-YADA.properties: secret/projects/yad/dev/secrets
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.profile: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.props: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-template-YADA.properties: '{{ with secret
+              "secret/projects/yad/dev/secrets" }} {{ range $k,$v := .Data.data }}
+              {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.profile: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k  | printf "export %s"}}={{ $v | printf  "\"%s\"\n" }} {{ end
+              }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.props: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/auth-path: auth/kube1
+            vault.hashicorp.com/preserve-secret-case: "true"
+            vault.hashicorp.com/role: project_yad_dev1_read
+            vault.hashicorp.com/secret-volume-path: /opt/yada/etc
+            vault.hashicorp.com/tls-skip-verify: "true"
+          labels:
+            app: yaspirin
+            environment: dev
+            yada/component: mailer-cpo-overdue-weekly-mock
+        spec:
+          containers:
+          - args:
+            - mailer
+            - --type
+            - overdue
+            - --overdue
+            - "8"
+            - --user
+            - all-cpo
+            - --site
+            - --output
+            - $(EMAIL_FORMAT)
+            - --recipient
+            - $(EMAIL_RECIPIENT)
+            command: []
+            envFrom:
+            - configMapRef:
+                name: cron-mailer-preferences-dev
+                optional: false
+              prefix: ""
+            - configMapRef:
+                name: aspirin-yada-config-dev
+                optional: false
+              prefix: ""
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/batches:88
+            imagePullPolicy: Always
+            name: mailer-cpo-overdue-weekly
+            resources:
+              limits: {}
+              requests: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          - args:
+            - -c
+            - '/opt/aspirin-asm.sh '
+            command:
+            - /bin/bash
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada-asm:88
+            imagePullPolicy: Always
+            name: yada-asm
+          dnsPolicy: ClusterFirst
+          imagePullSecrets:
+          - name: docker-repo.nibr.novartis.net
+          nodeSelector: {}
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext:
+            supplementalGroups: []
+          serviceAccount: vault-auth
+          serviceAccountName: vault-auth
+          terminationGracePeriodSeconds: 30
+      ttlSecondsAfterFinished: 604800
+  schedule: 14 23 * * 2,4
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  suspend: false
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: mailer-cpo-planner-weekly-mock
+  name: mailer-cpo-planner-weekly-dev
+  namespace: yad-nonprod
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      annotations: {}
+      labels:
+        app: yaspirin
+        environment: dev
+    spec:
+      backoffLimit: 0
+      completions: 1
+      parallelism: 1
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-inject-secret-YADA.properties: secret/projects/yad/dev/secrets
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.profile: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.props: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-template-YADA.properties: '{{ with secret
+              "secret/projects/yad/dev/secrets" }} {{ range $k,$v := .Data.data }}
+              {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.profile: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k  | printf "export %s"}}={{ $v | printf  "\"%s\"\n" }} {{ end
+              }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.props: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/auth-path: auth/kube1
+            vault.hashicorp.com/preserve-secret-case: "true"
+            vault.hashicorp.com/role: project_yad_dev1_read
+            vault.hashicorp.com/secret-volume-path: /opt/yada/etc
+            vault.hashicorp.com/tls-skip-verify: "true"
+          labels:
+            app: yaspirin
+            environment: dev
+            yada/component: mailer-cpo-planner-weekly-mock
+        spec:
+          containers:
+          - args:
+            - mailer
+            - --type
+            - planner
+            - --set1
+            - "14"
+            - --week
+            - 2016-07-17/2
+            - --user
+            - all-cpos
+            - --output
+            - $(EMAIL_FORMAT)
+            - --recipient
+            - $(EMAIL_RECIPIENT)
+            command: []
+            envFrom:
+            - configMapRef:
+                name: aspirin-yada-config-dev
+                optional: false
+              prefix: ""
+            - configMapRef:
+                name: cron-mailer-preferences-dev
+                optional: false
+              prefix: ""
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/batches:88
+            imagePullPolicy: Always
+            name: mailer-cpo-planner-weekly
+            resources:
+              limits: {}
+              requests: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          - args:
+            - -c
+            - '/opt/aspirin-asm.sh '
+            command:
+            - /bin/bash
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada-asm:88
+            imagePullPolicy: Always
+            name: yada-asm
+          dnsPolicy: ClusterFirst
+          imagePullSecrets:
+          - name: docker-repo.nibr.novartis.net
+          nodeSelector: {}
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext:
+            supplementalGroups: []
+          serviceAccount: vault-auth
+          serviceAccountName: vault-auth
+          terminationGracePeriodSeconds: 30
+      ttlSecondsAfterFinished: 604800
+  schedule: 14 23 * * 0
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  suspend: false
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: mailer-ctt-expiry-monthly-mock
+  name: mailer-ctt-expiry-monthly-dev
+  namespace: yad-nonprod
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      annotations: {}
+      labels:
+        app: yaspirin
+        environment: dev
+    spec:
+      backoffLimit: 0
+      completions: 1
+      parallelism: 1
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-inject-secret-YADA.properties: secret/projects/yad/dev/secrets
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.profile: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.props: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-template-YADA.properties: '{{ with secret
+              "secret/projects/yad/dev/secrets" }} {{ range $k,$v := .Data.data }}
+              {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.profile: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k  | printf "export %s"}}={{ $v | printf  "\"%s\"\n" }} {{ end
+              }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.props: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/auth-path: auth/kube1
+            vault.hashicorp.com/preserve-secret-case: "true"
+            vault.hashicorp.com/role: project_yad_dev1_read
+            vault.hashicorp.com/secret-volume-path: /opt/yada/etc
+            vault.hashicorp.com/tls-skip-verify: "true"
+          labels:
+            app: yaspirin
+            environment: dev
+            yada/component: mailer-ctt-expiry-monthly-mock
+        spec:
+          containers:
+          - args:
+            - mailer
+            - --type
+            - expiry
+            - --exp
+            - "186"
+            - --user
+            - all-ctt
+            - --flow
+            - groupByStudy
+            - --output
+            - $(EMAIL_FORMAT)
+            - --recipient
+            - $(EMAIL_RECIPIENT)
+            command: []
+            envFrom:
+            - configMapRef:
+                name: aspirin-yada-config-dev
+                optional: false
+              prefix: ""
+            - configMapRef:
+                name: cron-mailer-preferences-dev
+                optional: false
+              prefix: ""
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/batches:88
+            imagePullPolicy: Always
+            name: mailer-ctt-expiry-monthly
+            resources:
+              limits: {}
+              requests: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          - args:
+            - -c
+            - '/opt/aspirin-asm.sh '
+            command:
+            - /bin/bash
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada-asm:88
+            imagePullPolicy: Always
+            name: yada-asm
+          dnsPolicy: ClusterFirst
+          imagePullSecrets:
+          - name: docker-repo.nibr.novartis.net
+          nodeSelector: {}
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext:
+            supplementalGroups: []
+          serviceAccount: vault-auth
+          serviceAccountName: vault-auth
+          terminationGracePeriodSeconds: 30
+      ttlSecondsAfterFinished: 864000
+  schedule: 10 5  1 * *
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  suspend: false
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: mailer-dsm-expiry-monthly-mock
+  name: mailer-dsm-expiry-monthly-dev
+  namespace: yad-nonprod
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      annotations: {}
+      labels:
+        app: yaspirin
+        environment: dev
+    spec:
+      backoffLimit: 0
+      completions: 1
+      parallelism: 1
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-inject-secret-YADA.properties: secret/projects/yad/dev/secrets
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.profile: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.props: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-template-YADA.properties: '{{ with secret
+              "secret/projects/yad/dev/secrets" }} {{ range $k,$v := .Data.data }}
+              {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.profile: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k  | printf "export %s"}}={{ $v | printf  "\"%s\"\n" }} {{ end
+              }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.props: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/auth-path: auth/kube1
+            vault.hashicorp.com/preserve-secret-case: "true"
+            vault.hashicorp.com/role: project_yad_dev1_read
+            vault.hashicorp.com/secret-volume-path: /opt/yada/etc
+            vault.hashicorp.com/tls-skip-verify: "true"
+          labels:
+            app: yaspirin
+            environment: dev
+            yada/component: mailer-dsm-expiry-monthly-mock
+        spec:
+          containers:
+          - args:
+            - mailer
+            - --type
+            - expiry
+            - --exp
+            - "186"
+            - --user
+            - all-dsm
+            - --flow
+            - groupByStudy
+            - --output
+            - $(EMAIL_FORMAT)
+            - --recipient
+            - $(EMAIL_RECIPIENT)
+            command: []
+            envFrom:
+            - configMapRef:
+                name: aspirin-yada-config-dev
+                optional: false
+              prefix: ""
+            - configMapRef:
+                name: cron-mailer-preferences-dev
+                optional: false
+              prefix: ""
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/batches:88
+            imagePullPolicy: Always
+            name: mailer-dsm-expiry-monthly
+            resources:
+              limits: {}
+              requests: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          - args:
+            - -c
+            - '/opt/aspirin-asm.sh '
+            command:
+            - /bin/bash
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada-asm:88
+            imagePullPolicy: Always
+            name: yada-asm
+          dnsPolicy: ClusterFirst
+          imagePullSecrets:
+          - name: docker-repo.nibr.novartis.net
+          nodeSelector: {}
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext:
+            supplementalGroups: []
+          serviceAccount: vault-auth
+          serviceAccountName: vault-auth
+          terminationGracePeriodSeconds: 30
+      ttlSecondsAfterFinished: 864000
+  schedule: '17 5 1 * * '
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  suspend: false
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: mailer-tmo-overdue-weekly-mock
+  name: mailer-tmo-overdue-weekly-dev
+  namespace: yad-nonprod
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      annotations: {}
+      labels:
+        app: yaspirin
+        environment: dev
+    spec:
+      backoffLimit: 0
+      completions: 1
+      parallelism: 1
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-inject-secret-YADA.properties: secret/projects/yad/dev/secrets
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.profile: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.props: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-template-YADA.properties: '{{ with secret
+              "secret/projects/yad/dev/secrets" }} {{ range $k,$v := .Data.data }}
+              {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.profile: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k  | printf "export %s"}}={{ $v | printf  "\"%s\"\n" }} {{ end
+              }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.props: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/auth-path: auth/kube1
+            vault.hashicorp.com/preserve-secret-case: "true"
+            vault.hashicorp.com/role: project_yad_dev1_read
+            vault.hashicorp.com/secret-volume-path: /opt/yada/etc
+            vault.hashicorp.com/tls-skip-verify: "true"
+          labels:
+            app: yaspirin
+            environment: dev
+            yada/component: mailer-tmo-overdue-weekly-mock
+        spec:
+          containers:
+          - args:
+            - mailer
+            - --type
+            - overdue
+            - --overdue
+            - "8"
+            - --user
+            - all-tmo
+            - --site
+            - --output
+            - $(EMAIL_FORMAT)
+            - --recipient
+            - $(EMAIL_RECIPIENT)
+            command: []
+            envFrom:
+            - configMapRef:
+                name: aspirin-yada-config-dev
+                optional: false
+              prefix: ""
+            - configMapRef:
+                name: cron-mailer-preferences-dev
+                optional: false
+              prefix: ""
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/batches:88
+            imagePullPolicy: Always
+            name: mailer-tmo-overdue-weekly
+            resources:
+              limits: {}
+              requests: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          - args:
+            - -c
+            - '/opt/aspirin-asm.sh '
+            command:
+            - /bin/bash
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada-asm:88
+            imagePullPolicy: Always
+            name: yada-asm
+          dnsPolicy: ClusterFirst
+          imagePullSecrets:
+          - name: docker-repo.nibr.novartis.net
+          nodeSelector: {}
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext:
+            supplementalGroups: []
+          serviceAccount: vault-auth
+          serviceAccountName: vault-auth
+          terminationGracePeriodSeconds: 30
+      ttlSecondsAfterFinished: 604800
+  schedule: 41 23 * * 3
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  suspend: false
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: mailer-tmo-planner-weekly-mock
+  name: mailer-tmo-planner-weekly-dev
+  namespace: yad-nonprod
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      annotations: {}
+      labels:
+        app: yaspirin
+        environment: dev
+    spec:
+      backoffLimit: 0
+      completions: 1
+      parallelism: 1
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-inject-secret-YADA.properties: secret/projects/yad/dev/secrets
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.profile: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.props: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-template-YADA.properties: '{{ with secret
+              "secret/projects/yad/dev/secrets" }} {{ range $k,$v := .Data.data }}
+              {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.profile: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k  | printf "export %s"}}={{ $v | printf  "\"%s\"\n" }} {{ end
+              }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.props: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/auth-path: auth/kube1
+            vault.hashicorp.com/preserve-secret-case: "true"
+            vault.hashicorp.com/role: project_yad_dev1_read
+            vault.hashicorp.com/secret-volume-path: /opt/yada/etc
+            vault.hashicorp.com/tls-skip-verify: "true"
+          labels:
+            app: yaspirin
+            environment: dev
+            yada/component: mailer-tmo-planner-weekly-mock
+        spec:
+          containers:
+          - args:
+            - mailer
+            - --type
+            - planner
+            - --set1
+            - "8"
+            - --user
+            - all-tmo
+            - --site
+            - --output
+            - $(EMAIL_FORMAT)
+            - --recipient
+            - $(EMAIL_RECIPIENT)
+            command: []
+            envFrom:
+            - configMapRef:
+                name: cron-mailer-preferences-dev
+                optional: false
+              prefix: ""
+            - configMapRef:
+                name: aspirin-yada-config-dev
+                optional: false
+              prefix: ""
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/batches:88
+            imagePullPolicy: Always
+            name: mailer-tmo-planner-weekly
+            resources:
+              limits: {}
+              requests: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          - args:
+            - -c
+            - '/opt/aspirin-asm.sh '
+            command:
+            - /bin/bash
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada-asm:88
+            imagePullPolicy: Always
+            name: yada-asm
+          dnsPolicy: ClusterFirst
+          imagePullSecrets:
+          - name: docker-repo.nibr.novartis.net
+          nodeSelector: {}
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext:
+            supplementalGroups: []
+          serviceAccount: vault-auth
+          serviceAccountName: vault-auth
+          terminationGracePeriodSeconds: 30
+      ttlSecondsAfterFinished: 604800
+  schedule: 27 23 * * 0
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  suspend: false
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: paraphrast-config-refresh-weekly-mock
+  name: paraphrast-config-refresh-weekly-dev
+  namespace: yad-nonprod
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      annotations: {}
+      labels:
+        app: yaspirin
+        environment: dev
+    spec:
+      activeDeadlineSeconds: 1200
+      backoffLimit: 0
+      completions: 1
+      parallelism: 1
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-inject-secret-YADA.properties: secret/projects/yad/dev/secrets
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.profile: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.props: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-template-YADA.properties: '{{ with secret
+              "secret/projects/yad/dev/secrets" }} {{ range $k,$v := .Data.data }}
+              {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.profile: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k  | printf "export %s"}}={{ $v | printf  "\"%s\"\n" }} {{ end
+              }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.props: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/auth-path: auth/kube1
+            vault.hashicorp.com/preserve-secret-case: "true"
+            vault.hashicorp.com/role: project_yad_dev1_read
+            vault.hashicorp.com/secret-volume-path: /opt/yada/etc
+            vault.hashicorp.com/tls-skip-verify: "true"
+          labels:
+            app: yaspirin
+            environment: dev
+            yada/component: paraphrast-config-refresh-weekly-mock
+        spec:
+          containers:
+          - args:
+            - parabox
+            command: []
+            envFrom:
+            - configMapRef:
+                name: aspirin-yada-config-dev
+                optional: false
+              prefix: ""
+            - configMapRef:
+                name: aspirin-yada-config-dev
+                optional: false
+              prefix: ""
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/batches:88
+            imagePullPolicy: Always
+            name: paraphrast-config-refresh-weekly
+            resources:
+              limits: {}
+              requests: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          - args:
+            - -c
+            - '/opt/aspirin-asm.sh '
+            command:
+            - /bin/bash
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada-asm:88
+            imagePullPolicy: Always
+            name: yada-asm
+          dnsPolicy: ClusterFirst
+          imagePullSecrets:
+          - name: docker-repo.nibr.novartis.net
+          nodeSelector: {}
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext:
+            supplementalGroups: []
+          serviceAccount: vault-auth
+          serviceAccountName: vault-auth
+          terminationGracePeriodSeconds: 30
+      ttlSecondsAfterFinished: 259200
+  schedule: 17 7 * * 0,3
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  suspend: false
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  creationTimestamp: "2022-04-12T20:44:34Z"
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: rotate-awskeys-weekly-mock
+  name: rotate-awskeys-weekly-dev
+  namespace: yad-nonprod
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: yaspirin
+        environment: dev
+    spec:
+      backoffLimit: 0
+      completions: 1
+      parallelism: 1
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-inject-secret-YADA.properties: secret/projects/yad/dev/secrets
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.profile: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.props: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-template-YADA.properties: '{{ with secret
+              "secret/projects/yad/dev/secrets" }} {{ range $k,$v := .Data.data }}
+              {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.profile: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k  | printf "export %s"}}={{ $v | printf  "\"%s\"\n" }} {{ end
+              }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.props: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/auth-path: auth/kube1
+            vault.hashicorp.com/preserve-secret-case: "true"
+            vault.hashicorp.com/role: project_yad_dev1_read
+            vault.hashicorp.com/secret-volume-path: /opt/yada/etc
+            vault.hashicorp.com/tls-skip-verify: "true"
+          creationTimestamp: null
+          labels:
+            app: yaspirin
+            app.kubernetes.io/component: cronjob.rotate-awskeys-weekly
+            app.kubernetes.io/instance: yada-app
+            environment: dev
+        spec:
+          containers:
+          - args:
+            - awsrotate
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/batches:88
+            imagePullPolicy: Always
+            name: rotate-awskeys-weekly
+            resources: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          - args:
+            - -c
+            - '/opt/aspirin-asm.sh '
+            command:
+            - /bin/bash
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada-asm:88
+            imagePullPolicy: Always
+            name: yada-asm
+          dnsPolicy: ClusterFirst
+          imagePullSecrets:
+          - name: docker-repo.nibr.novartis.net
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          serviceAccount: vault-auth
+          serviceAccountName: vault-auth
+          terminationGracePeriodSeconds: 30
+      ttlSecondsAfterFinished: 604800
+  schedule: 1 1 * * 1
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  suspend: false
+status:
+  lastScheduleTime: "2022-05-02T01:01:00Z"
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: rotate-tokens-biweekly-mock
+  name: rotate-tokens-biweekly-dev
+  namespace: yad-nonprod
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      annotations: {}
+      labels:
+        app: yaspirin
+        environment: dev
+    spec:
+      backoffLimit: 0
+      completions: 1
+      parallelism: 1
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-inject-secret-YADA.properties: secret/projects/yad/dev/secrets
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.profile: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.props: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-template-YADA.properties: '{{ with secret
+              "secret/projects/yad/dev/secrets" }} {{ range $k,$v := .Data.data }}
+              {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.profile: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k  | printf "export %s"}}={{ $v | printf  "\"%s\"\n" }} {{ end
+              }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.props: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/auth-path: auth/kube1
+            vault.hashicorp.com/preserve-secret-case: "true"
+            vault.hashicorp.com/role: project_yad_dev1_read
+            vault.hashicorp.com/secret-volume-path: /opt/yada/etc
+            vault.hashicorp.com/tls-skip-verify: "true"
+          labels:
+            app: yaspirin
+            environment: dev
+            yada/component: rotate-tokens-biweekly-mock
+        spec:
+          containers:
+          - args:
+            - tokens
+            command: []
+            envFrom:
+            - configMapRef:
+                name: aspirin-yada-config-dev
+                optional: false
+              prefix: ""
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/batches:88
+            imagePullPolicy: Always
+            name: rotate-tokens-biweekly
+            resources:
+              limits: {}
+              requests: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          - args:
+            - -c
+            - '/opt/aspirin-asm.sh '
+            command:
+            - /bin/bash
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada-asm:88
+            imagePullPolicy: Always
+            name: yada-asm
+          dnsPolicy: ClusterFirst
+          imagePullSecrets:
+          - name: docker-repo.nibr.novartis.net
+          nodeSelector: {}
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext:
+            supplementalGroups: []
+          serviceAccount: vault-auth
+          serviceAccountName: vault-auth
+          terminationGracePeriodSeconds: 30
+      ttlSecondsAfterFinished: 604800
+  schedule: 11 9 7,16,25, * *
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  suspend: false
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: sync-aspirin-wb-daily-mock
+  name: sync-aspirin-wb-daily-dev
+  namespace: yad-nonprod
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      annotations: {}
+      labels:
+        app: yaspirin
+        environment: dev
+    spec:
+      backoffLimit: 0
+      completions: 1
+      parallelism: 1
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-inject-secret-YADA.properties: secret/projects/yad/dev/secrets
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.profile: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.props: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-template-YADA.properties: '{{ with secret
+              "secret/projects/yad/dev/secrets" }} {{ range $k,$v := .Data.data }}
+              {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.profile: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k  | printf "export %s"}}={{ $v | printf  "\"%s\"\n" }} {{ end
+              }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.props: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/auth-path: auth/kube1
+            vault.hashicorp.com/preserve-secret-case: "true"
+            vault.hashicorp.com/role: project_yad_dev1_read
+            vault.hashicorp.com/secret-volume-path: /opt/yada/etc
+            vault.hashicorp.com/tls-skip-verify: "true"
+          labels:
+            app: yaspirin
+            environment: dev
+            yada/component: sync-aspirin-wb-daily-mock
+        spec:
+          containers:
+          - args:
+            - sync
+            command: []
+            envFrom:
+            - configMapRef:
+                name: aspirin-yada-config-dev
+                optional: false
+              prefix: ""
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/batches:88
+            imagePullPolicy: Always
+            name: sync-aspirin-wb-daily
+            resources:
+              requests:
+                memory: "256Mi"
+              limits:
+                memory: "512Mi"
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          - args:
+            - -c
+            - '/opt/aspirin-asm.sh '
+            command:
+            - /bin/bash
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada-asm:88
+            imagePullPolicy: Always
+            name: yada-asm
+          dnsPolicy: ClusterFirst
+          imagePullSecrets:
+          - name: docker-repo.nibr.novartis.net
+          nodeSelector: {}
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext:
+            supplementalGroups: []
+          serviceAccount: vault-auth
+          serviceAccountName: vault-auth
+          terminationGracePeriodSeconds: 30
+      ttlSecondsAfterFinished: 86400
+  schedule: 44 * * * *
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  suspend: false
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  creationTimestamp: "2022-03-14T15:19:21Z"
+  labels:
+    app: yaspirin
+    environment: dev
+    yada/component: sync-manage-wb-monthly-mock
+  name: sync-manage-wb-monthly-dev
+  namespace: yad-nonprod
+spec:
+  concurrencyPolicy: Allow
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      annotations: {}
+      labels:
+        app: yaspirin
+        environment: dev
+    spec:
+      backoffLimit: 0
+      completions: 1
+      parallelism: 1
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-inject-secret-YADA.properties: secret/projects/yad/dev/secrets
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.profile: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-secret-aspirin-vault.props: secret/projects/yad/dev/aspirin
+            vault.hashicorp.com/agent-inject-template-YADA.properties: '{{ with secret
+              "secret/projects/yad/dev/secrets" }} {{ range $k,$v := .Data.data }}
+              {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.profile: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k  | printf "export %s"}}={{ $v | printf  "\"%s\"\n" }} {{ end
+              }} {{end }}'
+            vault.hashicorp.com/agent-inject-template-aspirin-vault.props: '{{ with
+              secret "secret/projects/yad/dev/aspirin" }} {{ range $k,$v := .Data.data
+              }} {{ $k }}={{ $v | printf  "%s\n" }} {{ end }} {{end }}'
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/auth-path: auth/kube1
+            vault.hashicorp.com/preserve-secret-case: "true"
+            vault.hashicorp.com/role: project_yad_dev1_read
+            vault.hashicorp.com/secret-volume-path: /opt/yada/etc
+            vault.hashicorp.com/tls-skip-verify: "true"
+          labels:
+            app: yaspirin
+            environment: dev
+            yada/component: sync-manage-wb-monthly-mock
+        spec:
+          containers:
+          - args:
+            - sync
+            - --manage
+            envFrom:
+            - configMapRef:
+                name: aspirin-yada-config-dev
+                optional: false
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/batches:88
+            imagePullPolicy: IfNotPresent
+            name: sync-manage-wb-monthly
+            resources: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          - args:
+            - -c
+            - '/opt/aspirin-asm.sh '
+            command:
+            - /bin/bash
+            image: docker-repo.nibr.novartis.net/docker-local/aspirin/branches/develop/2.2.1/yada-asm:88
+            imagePullPolicy: Always
+            name: yada-asm
+          dnsPolicy: ClusterFirst
+          imagePullSecrets:
+          - name: docker-repo.nibr.novartis.net
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          serviceAccount: vault-auth
+          serviceAccountName: vault-auth
+          terminationGracePeriodSeconds: 30
+      ttlSecondsAfterFinished: 864000
+  schedule: 5 1 15 * *
+  successfulJobsHistoryLimit: 3
+  suspend: false
+status:
+  lastScheduleTime: "2022-03-15T01:05:00Z"
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    app.kubernetes.io/name: yada-app
+    environment: dev
+  name: yada-pdb-dev
+  namespace: yad-nonprod
+spec:
+  minAvailable: 1
+  selector:
+    matchExpressions: []
+    matchLabels:
+      app: yaspirin
+      environment: dev
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    app.kubernetes.io/instance: yada-dev
+    app.kubernetes.io/name: yada-dev
+    environment: dev
+  name: yada-ingress-dev
+  namespace: yad-nonprod
+spec:
+  rules:
+    - host: yada.dev.nibr.novartis.net
+      http:
+        paths:
+          - backend:
+              service:
+                name: yada-dev
+                port:
+                  number: 80
+            path: /
+            pathType: ImplementationSpecific
+    - host: aspirin.dev.nibr.novartis.net
+      http:
+        paths:
+          - backend:
+              service:
+                name: yada-dev
+                port:
+                  number: 80
+            path: /
+            pathType: ImplementationSpecific
+    - host: aspirin-dev.nibr.novartis.net
+      http:
+        paths:
+          - backend:
+              service:
+                name: yada-dev
+                port:
+                  number: 80
+            path: /
+            pathType: ImplementationSpecific
+  tls:
+    - hosts:
+        - yada.dev.nibr.novartis.net
+        - aspirin-dev.nibr.novartis.net
+        - aspirin.dev.nibr.novartis.net
+      secretName: yada-tls-dev
+status:
+  loadBalancer:
+    ingress: null
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations: {}
+  labels:
+    app: yaspirin
+    app.kubernetes.io/instance: yadaadmintool-dev
+    app.kubernetes.io/name: yadaadmintool-dev
+    environment: dev
+  name: yadaadmintool-ingress-dev
+  namespace: yad-nonprod
+spec:
+  rules:
+  - host: yadaadmintool.dev.nibr.novartis.net
+    http:
+      paths:
+      - backend:
+          service:
+            name: yadaadmintool-dev
+            port:
+              number: 80
+        path: /
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - yadaadmintool.dev.nibr.novartis.net
+    secretName: yadaadmintool-dev
